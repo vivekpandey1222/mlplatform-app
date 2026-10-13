@@ -1,0 +1,88 @@
+
+📑 Project Documentation: Telecom Churn Prediction Platform
+
+This document details all the commands used during Step 1, Step 2, and Step 3 of the project, including their purposes and the underlying reasons for their execution. You can save this text directly into a README.md file for your reference.
+
+🛠️ Step 1: Machine Learning Model Training
+
+Goal: Create realistic fake telecom customer data, train a machine learning model (Random Forest Classifier), and save the final operational pattern as a churn_model.joblib file.
+
+Commands Used & Their Reasons:
+
+1. cd ~/mlplatform/mlplatform-app
+	• Reason: Moves your terminal session into the root directory of your project where your code will live.
+2. python3 -m venv .venv
+	• Reason: Creates an isolated Virtual Environment for this project. This prevents the Python libraries installed here from conflicting with other system-wide software packages.
+3. source .venv/bin/activate
+	• Reason: Activates the virtual environment. Any Python packages installed after running this command will stay strictly inside this project folder.
+4. mkdir app tests model
+	• Reason: Organises the project structure by creating dedicated folders: app (for the API source code), tests (for automated test scripts), and model (to store the exported ML model binaries).
+5. pip install -r requirements-dev.txt
+	• Reason: Installs all the software dependencies listed in your configuration files (such as fastapi, scikit-learn, pandas, pytest, etc.) in one automated step.
+6. python train.py
+	• Reason: Executes the Python script that generates the synthetic customer dataset, trains the Random Forest model, checks its performance metrics, and saves the trained model to model/churn_model.joblib.
+
+🌐 Step 2: Wrapping the Model in a Web API
+
+Goal: Embed the trained model inside a FastAPI web server. This allows external software applications or websites to send user data over a network connection and receive real-time churn predictions.
+
+Commands Used & Their Reasons:
+
+1. touch app/__init__.py
+	• Reason: Creates an empty file that tells Python to treat the app folder as a package/module, allowing components to be cleanly imported across files.
+2. PYTHONPATH=. python -m pytest -q
+	• Reason: Runs the automated test suite (tests/test_api.py). The PYTHONPATH=. prefix explicitly instructs Python to search for the app package within the current working directory, avoiding import failures.
+3. uvicorn app.main:app --port 8000
+	• Reason: Launches the Uvicorn web server on port 8000, bringing the FastAPI application live to listen for network traffic.
+4. curl -s localhost:8000/healthz
+	• Reason: Performs a quick liveness health check request to confirm that the web server process is running fine.
+5. curl -s -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"tenure_months": 2, "monthly_charge": 110, "support_calls": 8}'
+	• Reason: Tests the core /predict endpoint by sending structured customer facts in JSON format to confirm that the underlying ML model generates the correct churn probabilities.
+6. curl -s localhost:8000/metrics | grep predict_requests_total
+	• Reason: Validates that the Prometheus instrumentation client is active and properly tracking telemetry counters (like total incoming requests) for later cloud monitoring.
+
+📦 Step 3: Packaging the App in a Docker Container
+
+Goal: Package the entire web application, exact Python runtime version, and necessary library files into a sealed box (Docker Image) so it runs exactly the same way on a laptop, a CI pipeline, or the AWS Cloud.
+
+Commands Used & Their Reasons:
+
+1. docker build -t churn-api:local .
+	• Reason: Compiles a new local Docker Image called churn-api:local using the sequential layer rules defined in your project's Dockerfile.
+2. docker images churn-api
+	• Reason: Displays the stored metadata of the newly compiled image on your computer, allowing you to audit its final file size.
+3. docker run --rm -p 8000:8000 churn-api:local
+	• Reason: Spins up a running container instance from the image. The -p 8000:8000 flag forwards your laptop's local port 8000 to the container's isolated network port, and --rm deletes temporary container layers automatically when stopped to prevent junk accumulation.
+4. docker ps
+	• Reason: Lists all currently active, running containers along with their unique random Container IDs.
+5. docker run --rm churn-api:local id
+	• Reason: A security inspection command to confirm that the application internally runs as a restricted, unprivileged non-root user (uid=10001) instead of the root administrator.
+
+🚀 Step 4: Version Control & Cloud Artifact Management
+
+Goal: Secure your local source code files remotely on GitHub and store your production container images on Docker Hub so cloud servers can pull them during deployment.
+
+Commands Used & Their Reasons:
+
+1. git init
+	• Reason: Initializes a local Git repository tracking environment within your workspace directory.
+2. git config --global --add safe.directory <path>
+	• Reason: Addresses security warnings triggered when switching operations between standard users (vivek) and administrators (root). It explicitly marks the specified folder path as trusted by Git.
+3. git add .
+	• Reason: Stages all your source files, scripts, configurations, and models for tracking, while automatically filtering out virtual environment folders due to your .gitignore configuration.
+4. git commit -m "message"
+	• Reason: Permanently saves your staged project changes as a stable snapshot in your local history timeline along with a descriptive comment.
+5. git remote add origin <URL> / git remote set-url origin <URL>
+	• Reason: Maps or fixes the link between your local directory configuration and your central, online GitHub storage repository.
+6. git push -u origin main
+	• Reason: Transmits your locally committed history up to your remote GitHub repository (requiring a secure GitHub Personal Access Token - PAT instead of an standard password).
+7. docker login / sudo docker login -u <username>
+	• Reason: Authenticates your command-line interface with your remote Docker Hub cloud profile to gain image upload privileges.
+8. docker tag churn-api:local panditvirat/churn-api:v1.0
+	• Reason: Assigns a specialized namespace tag referencing your target Docker Hub account identity (panditvirat) and version string (v1.0), which is required by public registries before accepting pushes.
+9. docker push panditvirat/churn-api:v1.0
+	• Reason: Uploads the finalized, structured container image layers across the internet directly into your cloud-accessible Docker Hub account registry.
+10. sudo usermod -aG docker $USER
+	• Reason: Attaches your standard user profile (vivek) directly to the core operating system engine's docker permissions group. This removes the requirement to prefix commands with sudo and resolves credentials mismatch issues between user scopes.
+11. newgrp docker
+	• Reason: Instantly updates your active session permissions with the newly added group authorization rules, bypassing the need to close your terminal window or log out of your machine.
